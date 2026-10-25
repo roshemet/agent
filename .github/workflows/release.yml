@@ -1,12 +1,13 @@
-# A numbered release of the agent (Roshemet). Pushing the tag v<version> (package.json's version, with its CHANGELOG
-# entry) builds the package with every library pinned (npm-shrinkwrap.json) and GitHub's attestation of where it was
-# built (Sigstore). A family's repo installs a release only after checking that the attestation names this workflow,
-# in this repo, at that tag (the template's agent.yml and update.yml).
+# A numbered release of the agent (Roshemet). Publishing a release on GitHub's page with the tag v<version>
+# (package.json's version, with its CHANGELOG entry; the page makes the tag) builds the package with every library
+# pinned (npm-shrinkwrap.json) and GitHub's attestation of where it was built (Sigstore), and attaches both to that
+# release. A family's repo installs a release only after checking that the attestation names this workflow, in this
+# repo, at that tag (the template's agent.yml and update.yml).
 name: Release
 
 on:
-  push:
-    tags: ['v*.*.*']
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -54,5 +55,5 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           cp "$BUNDLE" "roshemet-agent-$v.tgz.sigstore.json"
           awk -v v="$v" 'index($0, "## " v " ") == 1 { f = 1; next } /^## / { f = 0 } f' CHANGELOG.md > notes.md
-          gh release create "$GITHUB_REF_NAME" "roshemet-agent-$v.tgz" "roshemet-agent-$v.tgz.sigstore.json" \
-            --title "Agent $v" --notes-file notes.md
+          gh release upload "$GITHUB_REF_NAME" "roshemet-agent-$v.tgz" "roshemet-agent-$v.tgz.sigstore.json" --clobber
+          gh release edit "$GITHUB_REF_NAME" --title "Agent $v" --notes-file notes.md
