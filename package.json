@@ -1,0 +1,24 @@
+{
+  "name": "roshemet-agent",
+  "version": "1.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The family's own bank agent for Roshemet: signs in to the family's banks on the family's own computer, box or GitHub, and sends the transactions to the family's own app for approval. The logins never leave the machine it runs on.",
+  "repository": { "type": "git", "url": "git+https://github.com/roshemet/agent.git" },
+  "bin": { "roshemet-agent": "scrape.mjs" },
+  "files": [
+    "scrape.mjs", "lib.mjs", "lib.d.mts", "computer.mjs", "computer.d.mts", "diagnostics.mjs", "diagnostics.d.mts",
+    "github.mjs", "github.d.mts", "githubConnect.mjs", "githubConnect.d.mts",
+    "patches.mjs", "patches.d.mts", "linux.mjs", "linux.d.mts", "box.mjs", "outbound.mjs", "outbound.d.mts",
+    "linux/setup-debian.sh", "linux/create-vm.sh", "README.md", "CHANGELOG.md", "LICENSE", "npm-shrinkwrap.json"
+  ],
+  "engines": { "node": ">=22.22.2" },
+  "scripts": {
+    "scrape": "node scrape.mjs"
+  },
+  "dependencies": {
+    "israeli-bank-scrapers": "6.12.2",
+    "libsodium-wrappers": "0.8.4"
+  }
+}

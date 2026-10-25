@@ -1,0 +1,58 @@
+# A numbered release of the agent (Roshemet). Pushing the tag v<version> (package.json's version, with its CHANGELOG
+# entry) builds the package with every library pinned (npm-shrinkwrap.json) and GitHub's attestation of where it was
+# built (Sigstore). A family's repo installs a release only after checking that the attestation names this workflow,
+# in this repo, at that tag (the template's agent.yml and update.yml).
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # the release
+      id-token: write # the attestation's signing certificate
+      attestations: write # keeping the attestation on GitHub
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      - name: The tag, the version and the changelog agree
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          [ "$(node -p "require('./package.json').version")" = "$v" ] || { echo "package.json's version is not $v."; exit 1; }
+          grep -q "^## $v " CHANGELOG.md || { echo "CHANGELOG.md has no entry for $v."; exit 1; }
+
+      - name: The package, every library pinned
+        run: |
+          cp package-lock.json npm-shrinkwrap.json
+          npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+          npm pack --ignore-scripts
+          ls -l roshemet-agent-*.tgz
+
+      - id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: roshemet-agent-*.tgz
+
+      - name: The release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          cp "$BUNDLE" "roshemet-agent-$v.tgz.sigstore.json"
+          awk -v v="$v" 'index($0, "## " v " ") == 1 { f = 1; next } /^## / { f = 0 } f' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" "roshemet-agent-$v.tgz" "roshemet-agent-$v.tgz.sigstore.json" \
+            --title "Agent $v" --notes-file notes.md
